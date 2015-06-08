@@ -1,0 +1,15 @@
+<?php
+/**
+ * @file
+ * Code for the idi interstitial feature.
+ */
+function idi_interstitial_init()
+{
+    drupal_add_js(drupal_get_path('module', 'idi_interstitial') . '/assets/idi_interstitial.js');
+    drupal_add_css(drupal_get_path('module', 'idi_interstitial') . '/assets/idi_interstitial.css');
+
+    //user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('view any interstitial bean'));
+
+}
+
+

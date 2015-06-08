@@ -1,0 +1,172 @@
+<?php
+/**
+ * @file
+ * Sample Bean Content to fill out icttemplate
+ */
+//http://www.pixelite.co.nz/article/how-use-entity-metadata-wrappers-drupal-7/
+//https://www.drupal.org/dynamic-queries
+//http://ovistaoa.dev/devel/php
+include_once 'idi_interstitial.features.inc';
+include_once 'idi_interstitial.features.field_base.inc';
+include_once 'idi_interstitial.features.field_instance.inc';
+include_once 'idi_interstitial.features.user_permission.inc';
+
+function idi_interstitial_install()
+{
+    if (!module_exists('interstitial')) {
+        $modules = array('interstitial');
+        module_enable($modules);
+        idi_interstitial_load_fields();
+    }
+}
+
+function idi_interstitial_uninstall()
+{
+    if (module_exists('interstitial')) {
+        $modules = array('interstitial');
+        module_disable($modules);
+    }
+}
+
+function idi_interstitial_enable()
+{
+    $bean_ids = array();
+    global $language;
+    //global $theme;
+    $theme = variable_get('theme_default', NULL);
+
+    idi_interstitial_bean_type_record('interstitial', 'interstitial');
+
+    foreach (idi_interstitial_info() as $bean_content) {
+        $bean = bean_create(array('type' => 'interstitial'));
+        $bean_wrap = entity_metadata_wrapper('bean', $bean);
+        $bean_wrap->label->set($bean_content['label']);
+        $bean_wrap->title->set($bean_content['title']);
+        $bean_wrap->language($language->language)->field_interstitial_copy->set(array(
+            'value' => $bean_content['field_interstitial_copy'],
+            'format' => 'full_html',
+        ));
+        $bean_wrap->field_external->set(array(
+            'url' => '#',
+            'title' => 'Ok',
+            'attributes' => array(
+                'title' => 'close this window and proceed to the external site',
+                'class' => 'external, button',
+            )
+        ));
+        $bean_wrap->field_internal->set(array(
+            'url' => '#',
+            'title' => 'Cancel',
+            'attributes' => array(
+                'title' => 'cancel request, remain on this page ',
+                'class' => 'internal, button',
+            )
+        ));
+        $bean_wrap->save();
+        $bean_ids[] = $bean_wrap->bid->value();
+        //set variable to store bean ids
+        variable_set('idi_interstitial_ids', $bean_ids);
+
+        idi_interstitial_position(
+            array(
+                'bid' => $bean_wrap->bid->value(),
+                'region' => $bean_content['region'],
+                'weight' => $bean_content['weight'],
+                'status' => $bean_content['status'],
+                'delta' => $bean_content['delta'],
+                'theme' => $theme,
+            ));
+    }
+    user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('view any interstitial bean'));
+
+    // Flush cache
+    cache_clear_all();
+}
+
+function idi_interstitial_disable()
+{
+    $bids = variable_get('idi_interstitial_ids', array());
+    entity_get_controller('bean')->delete($bids);
+
+    idi_interstitial_bean_type_record('interstitial', 'interstitial', false);
+
+}
+
+function idi_interstitial_load_fields()
+{
+    foreach (idi_interstitial_field_default_field_bases() as $field_base) {
+        field_create_field($field_base);
+    }
+    foreach (idi_interstitial_field_default_field_instances() as $field_instance) {
+        field_create_instance($field_instance);
+    }
+
+    foreach (idi_interstitial_field_default_field_instances() as $field_instance) {
+        field_create_instance($field_instance);
+    }
+
+}
+
+function idi_interstitial_info()
+{
+    $site_name = variable_get('site_name');
+    $bean_content = array(
+        'interstitial' => array(
+            'label' => 'interstitial',
+            'title' => 'interstitial',
+            'region' => 'hidden',
+            'delta' => 'interstitial',
+            'weight' => 1,
+            'status' => 1,
+            'field_interstitial_copy' => '<p>' . t('This link will take you to a website to which the ') . $site_name . t(' Privacy Policy does not apply. We encourage you to read the Privacy Policy of every website you visit.') . '</p>' .
+                t('You may click the OK button to access the requested website or click Cancel to remain on the current page.') . '</p>',
+        ),
+        'interstitial_iframe' => array(
+            'label' => 'interstitial_iframe',
+            'title' => 'interstitial_iframe',
+            'region' => 'hidden',
+            'delta' => 'interstitial-iframe',
+            'weight' => 2,
+            'status' => 1,
+            'field_interstitial_copy' => '<p>' . t('This link will take you to a part of the website to which the ') . $site_name . t(' Privacy Policy does not apply. We encourage you to read the Privacy Policy of every website you visit.') . '</p>' .
+                t('You may click the OK button to access the requested page or click Cancel to remain on the current page.') . '</p>',
+        ),
+
+    );
+    return $bean_content;
+}
+
+function idi_interstitial_position($params = array())
+{
+    //https://api.drupal.org/api/drupal/includes!database!database.inc/function/db_update/7
+    //define region and weight
+    db_update('block')
+        ->fields(array(
+                'status' => $params['status'], 'region' => $params['region'], 'weight' => $params['weight'])
+        )
+        ->condition('delta', $params['delta'])
+        ->condition('theme', $params['theme'])
+        ->execute();
+
+}
+
+function idi_interstitial_bean_type_record($name, $label, $insert = true)
+{
+    if ($insert) {
+        db_insert('bean_type')
+            ->fields(array(
+                    'name' => $name, 'label' => $label)
+            )
+            ->execute();
+    } else {
+        db_delete('bean')
+            ->condition('type', $name)
+            ->execute();
+
+        db_delete('bean_type')
+            ->condition('name', $name)
+            ->condition('label', $label)
+            ->execute();
+    }
+}
+

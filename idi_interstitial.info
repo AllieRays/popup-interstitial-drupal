@@ -1,0 +1,20 @@
+name = IDI Interstitial
+description = Interstitial pop up disclaimer
+core = 7.x
+package = IDI modules
+dependencies[] = bean_admin_ui
+dependencies[] = ctools
+dependencies[] = colorbox
+dependencies[] = features
+dependencies[] = link
+dependencies[] = text
+features[bean_type][] = interstitial
+features[ctools][] = bean_admin_ui:bean:5
+features[features_api][] = api:2
+features[field_base][] = field_external
+features[field_base][] = field_internal
+features[field_base][] = field_interstitial_copy
+features[field_instance][] = bean-interstitial-field_external
+features[field_instance][] = bean-interstitial-field_internal
+features[field_instance][] = bean-interstitial-field_interstitial_copy
+
